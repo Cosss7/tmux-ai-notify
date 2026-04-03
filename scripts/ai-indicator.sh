@@ -24,8 +24,9 @@ if tmux list-panes -t "$WINDOW_ID" -F '#{pane_current_command}' 2>/dev/null \
 fi
 
 # --- Tier 2: Deep path ---
-# For tools that show as a generic runtime (e.g. codex shows as "node"),
-# inspect the process tree of each pane to match against full command lines.
+# Only check panes whose pane_current_command is "node" — these could be
+# running Node.js-based AI tools (like codex) that show as "node" instead
+# of their actual tool name.
 
 # Platform-specific: get full command line for a PID
 get_cmdline() {
@@ -77,10 +78,12 @@ check_pane_tree() {
     return 1
 }
 
-# Run deep check on each pane
-for pane_pid in $(tmux list-panes -t "$WINDOW_ID" -F '#{pane_pid}' 2>/dev/null); do
-    if check_pane_tree "$pane_pid"; then
-        printf '%s' "$EMOJI"
-        exit 0
+# Run deep check only on panes showing "node" as current command
+while IFS=$'\t' read -r pane_cmd pane_pid; do
+    if [ "$pane_cmd" = "node" ]; then
+        if check_pane_tree "$pane_pid"; then
+            printf '%s' "$EMOJI"
+            exit 0
+        fi
     fi
-done
+done < <(tmux list-panes -t "$WINDOW_ID" -F '#{pane_current_command}\t#{pane_pid}' 2>/dev/null)
