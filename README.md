@@ -10,7 +10,7 @@ panes running AI coding tools (opencode, claude, codex).
 Add to your `.tmux.conf` (or `.tmux.conf.local` for oh-my-tmux users):
 
 ```tmux
-set -g @plugin 'your-username/tmux-ai-notify'
+set -g @plugin 'Cosss7/tmux-ai-notify'
 ```
 
 Press `prefix + I` to install.
