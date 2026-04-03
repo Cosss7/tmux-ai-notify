@@ -22,3 +22,65 @@ if tmux list-panes -t "$WINDOW_ID" -F '#{pane_current_command}' 2>/dev/null \
     printf '%s' "$EMOJI"
     exit 0
 fi
+
+# --- Tier 2: Deep path ---
+# For tools that show as a generic runtime (e.g. codex shows as "node"),
+# inspect the process tree of each pane to match against full command lines.
+
+# Platform-specific: get full command line for a PID
+get_cmdline() {
+    local pid=$1
+    if [ -r "/proc/$pid/cmdline" ]; then
+        # Linux: read from procfs, replace null bytes with spaces
+        tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null
+    else
+        # macOS/BSD: use ps
+        ps -p "$pid" -o args= 2>/dev/null
+    fi
+}
+
+# Platform-specific: get direct child PIDs of a process
+get_children() {
+    local parent_pid=$1
+    if [ -d "/proc" ] && ps --ppid "$parent_pid" -o pid= >/dev/null 2>&1; then
+        # Linux (GNU ps supports --ppid)
+        ps --ppid "$parent_pid" -o pid= 2>/dev/null
+    else
+        # macOS/BSD (no --ppid flag, filter manually)
+        ps -ax -o pid=,ppid= 2>/dev/null | awk -v ppid="$parent_pid" '$2 == ppid { print $1 }'
+    fi
+}
+
+# Check process tree iteratively up to 3 levels deep.
+# Breadth-first: check all processes at current depth, then go deeper.
+check_pane_tree() {
+    local pane_pid=$1
+    local pids_to_check="$pane_pid"
+    local depth=0
+
+    while [ "$depth" -le 3 ] && [ -n "$pids_to_check" ]; do
+        local next_pids=""
+        for pid in $pids_to_check; do
+            local cmdline
+            cmdline=$(get_cmdline "$pid")
+            if [ -n "$cmdline" ] && echo "$cmdline" | grep -qE "($TOOLS)"; then
+                return 0
+            fi
+            local children
+            children=$(get_children "$pid")
+            next_pids="$next_pids $children"
+        done
+        pids_to_check=$(echo "$next_pids" | xargs)
+        depth=$((depth + 1))
+    done
+
+    return 1
+}
+
+# Run deep check on each pane
+for pane_pid in $(tmux list-panes -t "$WINDOW_ID" -F '#{pane_pid}' 2>/dev/null); do
+    if check_pane_tree "$pane_pid"; then
+        printf '%s' "$EMOJI"
+        exit 0
+    fi
+done
