@@ -78,9 +78,19 @@ check_pane_tree() {
     return 1
 }
 
-# Run deep check only on panes showing "node" as current command
+# Determine if a pane's current command warrants a deep tree inspection.
+# "node" is checked because JS-based AI tools (e.g., codex) run under it.
+# Version-numbered binaries (e.g., Claude Code's "2.1.126") are also checked
+# because their pane_current_command is the version filename, not the tool name.
+should_deep_check() {
+    local cmd="$1"
+    [ "$cmd" = "node" ] && return 0
+    echo "$cmd" | grep -qE '^[0-9]+(\.[0-9]+)+$' && return 0
+    return 1
+}
+
 while IFS=$'\t' read -r pane_cmd pane_pid; do
-    if [ "$pane_cmd" = "node" ]; then
+    if should_deep_check "$pane_cmd"; then
         if check_pane_tree "$pane_pid"; then
             printf '%s' "$EMOJI"
             exit 0
