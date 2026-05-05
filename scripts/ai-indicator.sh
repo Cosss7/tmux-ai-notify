@@ -89,11 +89,11 @@ should_deep_check() {
     return 1
 }
 
-while IFS=$'\t' read -r pane_cmd pane_pid; do
+while IFS=: read -r pane_cmd pane_pid; do
     if should_deep_check "$pane_cmd"; then
         if check_pane_tree "$pane_pid"; then
             printf '%s' "$EMOJI"
             exit 0
         fi
     fi
-done < <(tmux list-panes -t "$WINDOW_ID" -F '#{pane_current_command}\t#{pane_pid}' 2>/dev/null)
+done < <(tmux list-panes -t "$WINDOW_ID" -F '#{pane_current_command}:#{pane_pid}' 2>/dev/null)
