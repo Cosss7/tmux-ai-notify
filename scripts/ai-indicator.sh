@@ -12,7 +12,7 @@ WINDOW_ID="${1:-}"
 EMOJI=$(tmux show-option -gqv @ai-notify-emoji 2>/dev/null)
 EMOJI="${EMOJI:-✨}"
 TOOLS=$(tmux show-option -gqv @ai-notify-tools 2>/dev/null)
-TOOLS="${TOOLS:-opencode|claude|codex}"
+TOOLS="${TOOLS:-opencode|claude|codex.*}"
 
 # --- Tier 1: Fast path ---
 # Check pane_current_command for all panes in this window.
