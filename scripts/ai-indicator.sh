@@ -85,7 +85,7 @@ check_pane_tree() {
 should_deep_check() {
     local cmd="$1"
     [ "$cmd" = "node" ] && return 0
-    echo "$cmd" | grep -qE '^[0-9]+(\.[0-9]+)+$' && return 0
+    echo "$cmd" | grep -qE '^[0-9]+([._][0-9]+)+$' && return 0
     return 1
 }
 
